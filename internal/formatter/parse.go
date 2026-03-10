@@ -190,9 +190,10 @@ func buildBodyModel(body *hclsyntax.Body, lines []Line, depth int, isTopLevel bo
 			if l.Kind == LineBlank {
 				blanks++
 			} else if l.Kind == LineCommentOnly {
-				// Leading comment for this item - reset blank count
+				// Leading comment for this item.
+				// Do NOT reset blanks: blank lines before the comment
+				// are part of this region's spacing.
 				commentLines = append(commentLines, l.Number)
-				blanks = 0
 			}
 		}
 
