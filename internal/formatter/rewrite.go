@@ -92,21 +92,30 @@ func writeItem(buf *bytes.Buffer, body *BodyModel, item ItemModel, lines []Line)
 	indent := strings.Repeat("  ", body.Depth)
 
 	if item.Kind == ItemAttribute {
+		// Compute original indentation of the start line for relative offset calculation.
+		startOrig := string(lines[item.StartLine-1].Content)
+		baseIndent := len(startOrig) - len(strings.TrimLeft(startOrig, " \t"))
+
 		// Write all lines of this attribute
 		for lineNum := item.StartLine; lineNum <= item.EndLine; lineNum++ {
 			lineIdx := lineNum - 1
 			if lineIdx < 0 || lineIdx >= len(lines) {
 				continue
 			}
-			content := strings.TrimLeft(string(lines[lineIdx].Content), " \t")
+			origLine := string(lines[lineIdx].Content)
+			content := strings.TrimLeft(origLine, " \t")
 			content = strings.TrimRight(content, " \t")
 			if lineNum == item.StartLine {
 				buf.WriteString(indent)
 			} else {
-				// Continuation lines: preserve relative indentation
-				// Use body.Depth+1 as base for continuation
+				// Preserve relative indentation from original source.
+				origIndent := len(origLine) - len(strings.TrimLeft(origLine, " \t"))
+				relIndent := origIndent - baseIndent
+				if relIndent < 0 {
+					relIndent = 0
+				}
 				buf.WriteString(indent)
-				buf.WriteString("  ")
+				buf.WriteString(strings.Repeat(" ", relIndent))
 			}
 			buf.WriteString(content)
 			buf.WriteByte('\n')
