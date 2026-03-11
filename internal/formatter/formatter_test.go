@@ -174,3 +174,39 @@ func TestFormat_NestedBlockAttr(t *testing.T) {
 		t.Errorf("nested block-like attr closing brace indented wrongly\n--- want ---\n%s\n--- got ---\n%s", input, string(got))
 	}
 }
+
+// TestFormat_CommentBeforeFirstBlock verifies that a leading comment on the
+// very first line of the file is preserved after formatting.
+// Regression test for: resource の直前のコメントが消える bug.
+func TestFormat_CommentBeforeFirstBlock(t *testing.T) {
+	input := "# ALB\nresource \"aws_security_group\" \"alb\" {\n  name = \"alb\"\n}\n"
+	want := "# ALB\nresource \"aws_security_group\" \"alb\" {\n  name = \"alb\"\n}\n"
+
+	got, err := formatter.Format("test.tf", []byte(input))
+	if err != nil {
+		t.Fatalf("Format error: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("leading comment was dropped\n--- want ---\n%s\n--- got ---\n%s", want, string(got))
+	}
+}
+
+// TestFormat_AlignSkipsListAttr verifies that an attribute whose value opens a
+// list (e.g. "Statement = [") does not distort the = alignment of preceding
+// single-line attributes.
+// Regression test for: list が次の行にあるときの = の位置 bug.
+func TestFormat_AlignSkipsListAttr(t *testing.T) {
+	// Both Version and Statement appear as raw text inside the multi-line
+	// `policy` attribute value. AlignEquals must not pad "Version" to align
+	// with "Statement" because "Statement = [" opens a multi-line list.
+	input := "resource \"aws_s3_bucket_policy\" \"alb_logs\" {\n  bucket = aws_s3_bucket.alb_logs.id\n  policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [\n      {\n        Effect = \"Allow\"\n      }\n    ]\n  })\n}\n"
+	want := input // no change expected
+
+	got, err := formatter.Format("test.tf", []byte(input))
+	if err != nil {
+		t.Fatalf("Format error: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("= alignment incorrectly padded Version\n--- want ---\n%s\n--- got ---\n%s", want, string(got))
+	}
+}

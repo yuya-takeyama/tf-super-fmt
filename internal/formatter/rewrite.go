@@ -214,6 +214,8 @@ func findAttrGroup(lines []string, startIdx int) (int, int) {
 }
 
 // isSingleLineAttr returns true if the line is a single-line attribute assignment.
+// Lines that open a multi-line value (e.g. "attr = [" or "attr = func(") return
+// false so they are excluded from = alignment groups.
 func isSingleLineAttr(line string) bool {
 	trimmed := strings.TrimLeft(line, " \t")
 	if trimmed == "" || strings.HasPrefix(trimmed, "#") ||
@@ -226,7 +228,20 @@ func isSingleLineAttr(line string) bool {
 	if strings.TrimRight(trimmed, " \t") == "}" {
 		return false
 	}
-	return hasAttributeEquals(trimmed)
+	if !hasAttributeEquals(trimmed) {
+		return false
+	}
+	// Exclude attributes whose value opens a multi-line expression (list or call).
+	// E.g. "Statement = [" or "tags = merge(" must not distort alignment of
+	// preceding single-line attributes.
+	eqIdx := findEqualSign(trimmed)
+	if eqIdx >= 0 && eqIdx+1 < len(trimmed) {
+		valuePart := strings.TrimRight(strings.TrimLeft(trimmed[eqIdx+1:], " \t"), " \t")
+		if strings.HasSuffix(valuePart, "[") || strings.HasSuffix(valuePart, "(") {
+			return false
+		}
+	}
+	return true
 }
 
 // indentLevel returns the number of leading spaces in a line.

@@ -177,7 +177,11 @@ func buildBodyModel(body *hclsyntax.Body, lines []Line, depth int, isTopLevel bo
 
 	// Build regions by associating leading comments and blank lines
 	var regions []Region
-	prevEndLine := startLine // track where previous item ended
+	// prevEndLine uses startLine-1 so the scan loop (which uses 1-based line
+	// numbers as 0-based slice indices) starts at index 0. Without this
+	// adjustment, the first physical line of the file is always skipped,
+	// causing comments on line 1 to be lost.
+	prevEndLine := startLine - 1 // track where previous item ended
 
 	for _, item := range items {
 		// Count blank lines before this item (between prevEndLine+1 and item.startLine-1)
