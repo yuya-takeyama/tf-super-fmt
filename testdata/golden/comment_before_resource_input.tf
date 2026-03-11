@@ -1,5 +1,5 @@
 # ALB
 resource "aws_security_group" "alb" {
-  name        = "alb"
+  name = "alb"
   description = "ALB security group"
 }
